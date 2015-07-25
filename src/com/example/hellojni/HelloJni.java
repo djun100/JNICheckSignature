@@ -17,75 +17,75 @@ package com.example.hellojni;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Iterator;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.Signature;
+import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
-import android.os.Bundle;
+import android.widget.Toast;
 
+public class HelloJni extends Activity {
 
-public class HelloJni extends Activity
-{
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        
-        //JNI¼ì²é
-        jniCheckAPP();
-        
-        // JAVA´úÂë»ñÈ¡
-        try {
-            PackageManager packageManager = getPackageManager();
-            PackageInfo info = packageManager.getPackageInfo(getPackageName(),
-                    PackageManager.GET_SIGNATURES);
-            Signature[] signs = info.signatures;
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            X509Certificate cert = (X509Certificate)cf.generateCertificate(
-                    new ByteArrayInputStream(signs[0].toByteArray()));
-            PublicKey key = cert.getPublicKey();
-            BigInteger modulus = ((RSAPublicKey)key).getModulus();
-            String strModulus = modulus.toString();         
-            Log.i("test", "hashCode : "+strModulus);
-            
-            TextView  tv = new TextView(this);
-            tv.setText(Integer.toString(modulus.hashCode()));
-            setContentView(tv);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
-    public void popAlarm(){
-    	Dialog alertDialog = new AlertDialog.Builder(this). 
-                //setTitle("¶Ô»°¿òµÄ±êÌâ"). 
-                setMessage("Ç©ÃûÈÏÖ¤Ê§°Ü£¬Çë´Ó¹Ù·½ÇþµÀÏÂÔØÓÎÏ·Å¶").
-                setPositiveButton("È·¶¨", new DialogInterface.OnClickListener() {                     
-                   @Override 
-                   public void onClick(DialogInterface dialog, int which) { 
-                       // TODO Auto-generated method stub  
-                	   System.exit(0);
-                   } 
-               }).
-               create(); 
-        alertDialog.show();
-    }
-    
-    public native void jniCheckAPP();
+	static {
+		System.loadLibrary("hello-jni");
+	}
 
-    static {
-        System.loadLibrary("hello-jni");
-    }
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		getSignature(this, null);
+		// JNIæ£€æŸ¥
+		 jniCheckAPP();
+	}
+
+	public void popAlarm() {
+		Dialog alertDialog = new AlertDialog.Builder(this).
+		// setTitle("å¯¹è¯æ¡†çš„æ ‡é¢˜").
+				setMessage("ç­¾åè®¤è¯å¤±è´¥ï¼Œè¯·ä»Žå®˜æ–¹æ¸ é“ä¸‹è½½æ¸¸æˆå“¦").setPositiveButton("ç¡®å®š", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						// TODO Auto-generated method stub
+						System.exit(0);
+					}
+				}).create();
+		alertDialog.show();
+	}
+
+	public native void jniCheckAPP();
+
+	/**
+	 * @param context
+	 * @param pkgname
+	 *            null->self
+	 */
+	public String getSignature(Context context, String pkgname) {
+		pkgname = TextUtils.isEmpty(pkgname) ? context.getPackageName() : pkgname;
+		PackageManager pm = context.getPackageManager();
+		try {
+			PackageInfo packageInfo = pm.getPackageInfo(pkgname, PackageManager.GET_SIGNATURES);
+			String signatures = packageInfo.signatures[0].toCharsString();
+			return signatures;
+		} catch (NameNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
 }

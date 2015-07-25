@@ -6,11 +6,12 @@
 #define LOG_TAG "debug log"
 #define LOGI(fmt, args...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, fmt, ##args)
 #define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
+#define LOGW(fmt, args...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, fmt, ##args)
 #define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, ##args)
 
 void native_jniCheckAPP(JNIEnv* env, jobject thiz);
 
-#define TEST_HASH_CODE 1
+//#define TEST_HASH_CODE 1
 
 static JNINativeMethod methods[] = {
     {
@@ -29,16 +30,7 @@ const char *global_app_packageName = "com.example.hellojni";
 const int global_app_signature_hash_code = -401017341;
 
 //10进制的公钥， 这个可以换成校验hashcode或存放在服务器上
-const char *global_app_signature_public_key = "\
-163002450248501877979451923114076470408521299184290880555725676206478812\
-396297015382361623011458590271101795741213543248834070559689844392199662\
-184469837911327429301316378176688177366475493400109592764129698892321155\
-738593453757347549473977575874259887752652200140584344546424137153728092\
-165153023797675065355220808340568930556899891109291645486152987780567730\
-249593220917233124089182239906007576408526866224016070992178601327488769\
-843680405801044384371583240149107393154575476449466199403189470887667647\
-811954972307395221116343051066800181634891617507012629903754919717509460\
-04935400868449061562287317243123121722377";
+const char *global_app_signature_public_key = "16677973527980781150179554117835709071112028642052917449937585441667307531898809073683231170022683231961731813934578833883995380099861595345449671890880297379450540749312004179686347504728894236416397358607759263187167500115716466485559961894642042746715818037178777463370252766363035172616889937739622572707431038232195511527792673067308163152604333961642987306385906106396761049430450682151611810716244258339080386250432491678689436070125725897064750612195001948203555052861586910443240445373519600743574611347603913868231218314329932062612185847152458660920287597987925371907180547998173417087697617067374791027981";
 
 // 16进制的
 // 811f70a9799a03bfedf411b6ecfa99a347e2f12b9b5ab38a0a12a799f28d398bd\
@@ -51,8 +43,7 @@ const char *global_app_signature_public_key = "\
 // ea5486f615bebba3ca9fd6ee7ca9ac2f531f293f49047a57f36771409";
 
 // 常用调用的封装
-jvalue JNU_CallMethodByName(JNIEnv *env, jobject obj,
-        const char *name, const char *descriptor, ...) {
+jvalue CallJavaMethodByName(JNIEnv *env, jobject obj,const char *name, const char *descriptor, ...) {
     va_list args;
     jclass clazz;
     jmethodID mid;
@@ -110,10 +101,12 @@ jvalue JNU_CallMethodByName(JNIEnv *env, jobject obj,
     }
     return result;
 }
-
+/**
+ * 获取Signature签名实例
+ */
 jobject getSignature(JNIEnv* env, jobject thiz){
     //获取包名
-    jstring jstr_packageName = (jstring) JNU_CallMethodByName(env,
+    jstring jstr_packageName = (jstring) CallJavaMethodByName(env,
             thiz, "getPackageName", "()Ljava/lang/String;").l;
 
     if ((*env)->ExceptionCheck(env) || jstr_packageName == NULL) {
@@ -139,7 +132,7 @@ jobject getSignature(JNIEnv* env, jobject thiz){
            loc_str_app_packageName);
 
     // 获得应用包的管理器
-    jobject package_manager = JNU_CallMethodByName(env, thiz,
+    jobject package_manager = CallJavaMethodByName(env, thiz,
            "getPackageManager", "()Landroid/content/pm/PackageManager;").l;
     if ((*env)->ExceptionCheck(env) || package_manager == NULL) {
         LOGI("can't get obj of getPackageManager");
@@ -147,7 +140,7 @@ jobject getSignature(JNIEnv* env, jobject thiz){
     }
 
     // 获得应用包的信息
-    jobject package_info = JNU_CallMethodByName(env,
+    jobject package_info = CallJavaMethodByName(env,
             package_manager, "getPackageInfo",
             "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;",
             (*env)->NewStringUTF(env, global_app_packageName), 64).l;
@@ -217,14 +210,14 @@ jobject getPublicKey(JNIEnv* env, jobject signature){
     }
 
     // X509Certificate cert = (X509Certificate)cf.generateCertificate(bais)
-    jobject cert = JNU_CallMethodByName(env, cf, "generateCertificate", "(Ljava/io/InputStream;)Ljava/security/cert/Certificate;", bais).l;
+    jobject cert = CallJavaMethodByName(env, cf, "generateCertificate", "(Ljava/io/InputStream;)Ljava/security/cert/Certificate;", bais).l;
     if ((*env)->ExceptionCheck(env) || cert == NULL) {
        LOGI("can't get obj of cert");
        return NULL;
     }
 
     //PublicKey key = cert.getPublicKey();
-    jobject publicKey = JNU_CallMethodByName(env, cert, "getPublicKey", "()Ljava/security/PublicKey;").l;
+    jobject publicKey = CallJavaMethodByName(env, cert, "getPublicKey", "()Ljava/security/PublicKey;").l;
     if ((*env)->ExceptionCheck(env) || publicKey == NULL) {
        LOGI("can't get obj of publicKey");
        return NULL;
@@ -246,17 +239,17 @@ int do_check_signature(JNIEnv* env, jobject thiz){
     }
 
     //BigInteger modulus = ((RSAPublicKey)key).getModulus().hashCode();
-    jobject modulus = JNU_CallMethodByName(env, publicKey, "getModulus", "()Ljava/math/BigInteger;").l;
+    jobject modulus = CallJavaMethodByName(env, publicKey, "getModulus", "()Ljava/math/BigInteger;").l;
     //String strModulus = modulus.toString(10)
-    jstring strKey = (jstring)JNU_CallMethodByName(env, modulus, "toString", "(I)Ljava/lang/String;", 10).l;
+    jstring strKey = (jstring)CallJavaMethodByName(env, modulus, "toString", "(I)Ljava/lang/String;", 10).l;
 
 #ifndef TEST_HASH_CODE
     const char *nativeKeyString = (*env)->GetStringUTFChars(env, strKey, 0);
-    LOGI("this app publicKey of signature is %s", nativeKeyString);
+    LOGW("this app publicKey of signature is %s", nativeKeyString);
     equal = 0 == strncmp(nativeKeyString, global_app_signature_public_key, 1000);
     (*env)->ReleaseStringUTFChars(env, strKey, nativeKeyString);
 #else
-    int hash_code = (int)JNU_CallMethodByName(env, modulus, "hashCode", "()I").i;
+    int hash_code = (int)CallJavaMethodByName(env, modulus, "hashCode", "()I").i;
     LOGI("this app hash_code of signature is %d", hash_code);
     equal = hash_code == global_app_signature_hash_code;
 #endif
@@ -268,7 +261,7 @@ int do_check_signature(JNIEnv* env, jobject thiz){
 JNIEXPORT void native_jniCheckAPP(JNIEnv* env, jobject thiz) {
     LOGI("start jniCheckAPP");
     if(do_check_signature(env, thiz) != 1){
-        JNU_CallMethodByName(env, thiz, "popAlarm", "()V");
+        CallJavaMethodByName(env, thiz, "popAlarm", "()V");
     }
 }
 
